@@ -12,4 +12,4 @@
   :java-source-paths [ "srcj"]
   :global-vars {*warn-on-reflection* true}
   :repl-options {:init-ns yatrace.core}
-  :main yatrace.Main)
+  :main yatrace.Client)

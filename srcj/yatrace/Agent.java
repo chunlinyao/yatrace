@@ -2,23 +2,31 @@ package yatrace;
 
 import java.io.File;
 import java.lang.instrument.Instrumentation;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 public class Agent {
+	static public interface Advice {
+		void onMethodBegin(String className, String methodName,
+				String descriptor, Object thisObject, Object[] args);
 
+		void onMethodEnd(Object resultOrException);
+
+	}
+
+	static public interface AgentMain {
+		void agentmain(final String args, final Instrumentation inst);
+	}
+
+	private static volatile Advice delegate = null;
+	
 	public static void agentmain(final String args, final Instrumentation inst)
 			throws Exception {
 		final String[] parts = args.split("\n", 2);
 		final URL agentJar = new File(parts[0]).toURI().toURL();
 		final ClassLoader classLoader = makeClassLoader(new URL[] { agentJar });
-		Class<?> mainClass = Class.forName("yatrace.Main", false, classLoader);
-		final Method method = mainClass.getMethod("agentMain", new Class[] {
-				String.class, Instrumentation.class });
 		AccessController.doPrivileged(new PrivilegedAction<Void>() {
 
 			@Override
@@ -32,12 +40,14 @@ public class Agent {
 						@Override
 						public void run() {
 							try {
-								method.invoke(null, new Object[] { parts[1],
-										inst });
+								Class<?> mainClass = Class.forName("yatrace.Main", false, classLoader);
+								final AgentMain agentMain = (AgentMain)  mainClass.newInstance();
+								agentMain.agentmain(parts[1], inst);
+								delegate = (Advice) agentMain;
 							} catch (Exception e) {
 								throw new RuntimeException(e);
 							}
-
+							
 						}
 					});
 					thread.start();
@@ -68,14 +78,16 @@ public class Agent {
 							 * boolean)
 							 */
 							@Override
-							protected Class<?> loadClass(final String name,
-									final boolean resolve)
+							protected synchronized Class<?> loadClass(
+									final String name, final boolean resolve)
 									throws ClassNotFoundException {
 								final Class<?> loadedClass = findLoadedClass(name);
 								if (loadedClass != null) {
 									return loadedClass;
 								}
-
+								if (name.startsWith("yatrace.Agent")) {
+									return getParent().loadClass(name);
+								}
 								try {
 									final Class<?> aClass = findClass(name);
 									if (resolve) {
@@ -96,5 +108,9 @@ public class Agent {
 	public static void premain(final String args, final Instrumentation inst)
 			throws Exception {
 		agentmain(args, inst);
+	}
+	
+	public static void reset() {
+		delegate = null;
 	}
 }
