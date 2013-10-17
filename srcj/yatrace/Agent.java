@@ -50,6 +50,7 @@ public class Agent {
 							
 						}
 					});
+					thread.setDaemon(true);
 					thread.start();
 					thread.join();
 					return null;
