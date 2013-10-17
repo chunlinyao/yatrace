@@ -9,41 +9,41 @@
            )
   )
 
-(defn ^String classname [c]
+(defn ^:private ^String classname [c]
   (cond (instance? Class c)
         (.getName ^Class c)
         (string? c) c
         :else
         (classname (type c))))
 
-(defn class-as-resource [cn]
+(defn- class-as-resource [cn]
   (let [cn (classname cn)]
     (io/resource (str (s/replace cn "." "/") ".class"))))
 
-(defn ^File agent-jar []
+(defn ^:private ^File agent-jar []
   (let [^URL f (class-as-resource yatrace.Main)]
     (if (= "file" (.getProtocol f))
       (some (fn [^File f] (when (re-find #"yatrace-.*.jar" (.getName f)) f)) (file-seq (io/file "target")))
       (io/file (URL. (first (s/split (.getFile f) #"!")))))))
 
-(defonce ^URLClassLoader tools-jar-loader
+(defonce ^:private ^URLClassLoader tools-jar-loader
   (URLClassLoader. (into-array URL [(.toURL (io/file (System/getProperty "java.home")
                                                      "../lib/tools.jar"))])))
-(defn vm-class []
+(defn- vm-class []
   (.loadClass tools-jar-loader "com.sun.tools.attach.VirtualMachine"))
 (defn vm [pid]
   (let [vm-class (vm-class)]
     (.invoke (.getMethod vm-class "attach"
                          (into-array Class [String])) nil (object-array [pid]))))
 
-(defn list-vms []
+(defn- list-vms []
   (let [vm-class (vm-class)
         vms (-> vm-class (.getMethod "list" (make-array Class 0)) (.invoke nil (make-array Object 0)))]
     (doseq [m vms]
       (println (.id m) (.displayName m)))
     ))
 
-(defn repl-client [port-file]
+(defn- repl-client [port-file]
   (if-let [port (slurp port-file)]
     (reply/launch {:attach port
                    :skip-default-init true
@@ -52,7 +52,7 @@
                    })
     (println "Can not connect to target vm")))
 
-(defn attach-agent [pid]
+(defn- attach-agent [pid]
   (let [vm (vm pid)
         agent (.getAbsolutePath (agent-jar))
         port-file (.getAbsolutePath (doto ( File/createTempFile "yatrace" ".port")
