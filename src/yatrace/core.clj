@@ -1,6 +1,6 @@
 (ns yatrace.core
   (:require [clojure.string :as s]
-            )
+            [yatrace.core.instrument :as inst])
   (:use [clojure.tools.nrepl.server :only (start-server stop-server)])
   (:import [java.lang.instrument Instrumentation ClassFileTransformer]
            )
@@ -21,7 +21,6 @@
     `(println "Unable to set signal handlers."))
   )
 
-
 (defn repl-start [port-file]
   (defonce server (start-server))
   (spit port-file (:port server)))
@@ -35,3 +34,11 @@
 (defn agentmain [^String args ^Instrumentation instrumentation]
   (def instrumentation instrumentation)
   (repl-start args))
+
+(defn method-enter [class-name method-name descriptor this-obj args]
+  (println (str "enter" class-name method-name
+                ))
+  )
+
+(defn method-exit [result-or-exception]
+  (println (str "exit method")))

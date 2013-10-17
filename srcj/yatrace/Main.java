@@ -10,17 +10,23 @@ public class Main implements Agent.Advice, Agent.AgentMain {
 
 	private IFn requireFn;
 	private IFn agentMainFn;
+	private IFn methodBeginFn;
+	private IFn methodEndFn;
 	{
 		requireFn = RT.var("clojure.core", "require").fn();
 		requireFn.invoke(Symbol.intern("yatrace.core"));
 		agentMainFn = RT.var("yatrace.core", "agentmain").fn();
+		methodBeginFn = RT.var("yatrace.core", "method-enter").fn();
+		methodEndFn = RT.var("yatrace.core", "method-exit").fn();
 	}
 
 	public void onMethodBegin(String className, String methodName,
 			String descriptor, Object thisObject, Object[] args) {
+		methodBeginFn.invoke(className, methodName, descriptor, thisObject, args);
 	}
 
 	public void onMethodEnd(Object resultOrException) {
+		methodEndFn.invoke(resultOrException);
 	}
 
 	@Override

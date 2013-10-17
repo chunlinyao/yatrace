@@ -2,6 +2,7 @@ package yatrace;
 
 import java.io.File;
 import java.lang.instrument.Instrumentation;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.AccessController;
@@ -20,8 +21,22 @@ public class Agent {
 		void agentmain(final String args, final Instrumentation inst);
 	}
 
+	public static final Method ON_METHOD_BEGIN;
+	public static final Method ON_METHOD_END;
+
 	private static volatile Advice delegate = null;
-	
+
+	static {
+		try {
+			ON_METHOD_BEGIN = Agent.class.getMethod("onMethodBegin",
+					String.class, String.class, String.class, Object.class,
+					Object[].class);
+			ON_METHOD_END = Agent.class.getMethod("onMethodEnd", Object.class);
+		} catch (NoSuchMethodException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 	public static void agentmain(final String args, final Instrumentation inst)
 			throws Exception {
 		final String[] parts = args.split("\n", 2);
@@ -40,14 +55,16 @@ public class Agent {
 						@Override
 						public void run() {
 							try {
-								Class<?> mainClass = Class.forName("yatrace.Main", false, classLoader);
-								final AgentMain agentMain = (AgentMain)  mainClass.newInstance();
+								Class<?> mainClass = Class.forName(
+										"yatrace.Main", false, classLoader);
+								final AgentMain agentMain = (AgentMain) mainClass
+										.newInstance();
 								agentMain.agentmain(parts[1], inst);
 								delegate = (Advice) agentMain;
 							} catch (Exception e) {
 								throw new RuntimeException(e);
 							}
-							
+
 						}
 					});
 					thread.setDaemon(true);
@@ -110,7 +127,21 @@ public class Agent {
 			throws Exception {
 		agentmain(args, inst);
 	}
-	
+
+	public static void onMethodBegin(String className, String methodName,
+			String descriptor, Object thisObject, Object[] args) {
+		if (delegate != null) {
+			delegate.onMethodBegin(className, methodName, descriptor,
+					thisObject, args);
+		}
+	}
+
+	public static void onMethodEnd(Object resultOrException) {
+		if (delegate != null) {
+			delegate.onMethodEnd(resultOrException);
+		}
+	}
+
 	public static void reset() {
 		delegate = null;
 	}

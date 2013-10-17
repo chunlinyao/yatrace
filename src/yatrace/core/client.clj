@@ -48,7 +48,11 @@
     (reply/launch {:attach port
                    :skip-default-init true
                    :custom-eval (list 'do '(println "Welcom to yatrace")
-                                      '(require 'complete.core))
+                                      '(require 'complete.core)
+                                      '(use '[yatrace helper]
+                                            '[yatrace (core :only [repl-stop])])
+                                      '(use '[clojure (repl :only [doc source])])
+                                      )
                    })
     (println "Can not connect to target vm")))
 
