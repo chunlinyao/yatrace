@@ -50,8 +50,9 @@
                    :custom-eval (list 'do '(println "Welcom to yatrace")
                                       '(require 'complete.core)
                                       '(use '[yatrace helper]
-                                            '[yatrace (core :only [repl-stop])])
-                                      '(use '[clojure (repl :only [doc source])])
+                                            '[yatrace (core :only [repl-stop])]
+                                            '[clojure (repl :only [doc source])]
+                                            '[yatrace.core (command :only [trace])])
                                       )
                    })
     (println "Can not connect to target vm")))

@@ -12,7 +12,6 @@
              "Can-Retransform-Classes" "true"
              "Can-Redefine-Classes" "true"}
   :java-source-paths [ "srcj"]
-  :aot :all
   :global-vars {*warn-on-reflection* true}
   :repl-options {:init-ns yatrace.core}
   :main yatrace.Client)

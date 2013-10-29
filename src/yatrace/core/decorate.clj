@@ -7,6 +7,7 @@
 
 (declare class-adapter method-adapter not-abstract?
          load-this-or-push-null-if-is-static load-arg-array prepare-result-by)
+
 (defn decorate [^bytes bytecode-buffer name method-filter]
   (let [cr (ClassReader. bytecode-buffer)
         cw (ClassWriter. ClassWriter/COMPUTE_FRAMES)]
@@ -18,6 +19,7 @@
 
   (proxy [ClassAdapter] [cw]
     (visitMethod [acc name desc sign exces]
+      (print name)
       (let [^ClassAdapter this this
             mv (proxy-super visitMethod acc name desc sign exces)
             target? (delay (method-filter name))]
@@ -30,11 +32,11 @@
           )
         ))
     ))
+
 (defn- to-asm-method [^java.lang.reflect.Method m]
   (Method. (.getName m) (Type/getMethodDescriptor m)))
+
 (defn method-adapter [^String class-name ^MethodVisitor mv acc ^String name ^String desc]
-  (println (str "method-adapter class " class-name " method " name " desc " desc))
-  (println (Type/getType Agent))
   (let [agent (Type/getType Agent)
         enter (to-asm-method Agent/ON_METHOD_BEGIN)
         exit  (to-asm-method Agent/ON_METHOD_END)
@@ -43,7 +45,6 @@
     (proxy [AdviceAdapter] [mv acc name desc]
       
       (visitMaxs [max-stack max-local]
-        (println "visitMaxs")
         (let [^AdviceAdapter this this]
           (doto this
             (.mark end)
@@ -54,7 +55,6 @@
           (proxy-super visitMaxs max-stack max-local)))
       
       (onMethodEnter []
-        (println "onMethodEnter")
         (let [^AdviceAdapter this this]
           (doto this
             (.push class-name)
@@ -66,7 +66,6 @@
             (.mark start))))
 
       (onMethodExit [opcode]
-        (println "onMethodExit")
         (let [^AdviceAdapter this this]
           (if (not= opcode
                     Opcodes/ATHROW)
