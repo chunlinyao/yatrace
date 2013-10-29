@@ -20,13 +20,13 @@ public class Main implements Agent.Advice, Agent.AgentMain {
 		methodEndFn = RT.var("yatrace.core", "method-exit").fn();
 	}
 
-	public void onMethodBegin(String className, String methodName,
+	public void onMethodBegin(Thread t, String className, String methodName,
 			String descriptor, Object thisObject, Object[] args) {
-		methodBeginFn.invoke(className, methodName, descriptor, thisObject, args);
+		methodBeginFn.invoke(t, className, methodName, descriptor, thisObject, args);
 	}
 
-	public void onMethodEnd(Object resultOrException) {
-		methodEndFn.invoke(resultOrException);
+	public void onMethodEnd(Thread t, Object resultOrException) {
+		methodEndFn.invoke(t, resultOrException);
 	}
 
 	@Override

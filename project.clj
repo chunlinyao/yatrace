@@ -14,4 +14,5 @@
   :java-source-paths [ "srcj"]
   :global-vars {*warn-on-reflection* true}
   :repl-options {:init-ns yatrace.core}
+  :profiles {:uberjar {:aot :all}}
   :main yatrace.Client)

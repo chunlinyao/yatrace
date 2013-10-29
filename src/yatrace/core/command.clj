@@ -28,7 +28,10 @@
         @transform-task
         (core/reset-queue)
         (doseq [evt (repeatedly core/take-queue)]
-          (pprint (helper/to-tree evt)))
+          (do (println (str "Received " (name (:type evt)) " event:"))
+              (pprint (helper/to-tree (:ctx  evt)))
+              (when (instance? Throwable (get-in evt [:ctx  :result-or-exception]))
+                (.printStackTrace ^Throwable (get-in evt [:ctx  :result-or-exception])))))
         ))
     )
   )

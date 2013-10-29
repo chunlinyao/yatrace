@@ -48,39 +48,41 @@
     stack
     []
     ))
-(defn- push-invoke-context [ctx]
-  (swap! thread-context update-in [( Thread/currentThread)] conj ctx)
+(defn- push-invoke-context [thread ctx]
+  (swap! thread-context update-in [thread] conj ctx)
   )
 
-(defn- pop-invoke-context []
-  (let [ctx (-> ( Thread/currentThread)
+(defn- pop-invoke-context [thread]
+  (let [ctx (-> thread
                 get-thread-context
                 peek)
         _ (swap! thread-context update-in [( Thread/currentThread)] pop)]
     ctx)
   )
-(defn method-enter [class-name method-name descriptor this-obj args]
+(defn method-enter [thread class-name method-name descriptor this-obj args]
   (println (str "enter " class-name "#" method-name
                 ))
-  (let [ctx  {:class-name  class-name
+  (let [ctx  {
+              :class-name  class-name
               :method-name method-name
               :desc        descriptor
               :this-obj    this-obj
               :args        (seq args)
               :start       (System/currentTimeMillis)}]
-    (push-invoke-context ctx)
-    (.offer ^BlockingQueue @queue {:type :exit :ctx ctx})
+    (push-invoke-context thread ctx)
+    (.offer ^BlockingQueue @queue {:type :enter :ctx ctx})
     )
   )
 
-(defn method-exit [result-or-exception]
+(defn method-exit [thread result-or-exception]
   (println (str "exit method"))
   (let [end-time (System/currentTimeMillis)
-        ctx (pop-invoke-context)
-        ctx' (merge ctx {:result-or-exception result-or-exception
-                    :end                 end-time
-                    :duration            (- (:start ctx) end-time)
+        ctx (pop-invoke-context thread)
+        ctx' (merge ctx {
+                         :result-or-exception result-or-exception
+                         :end                 end-time
+                         :duration            (- (:start ctx) end-time)
                          })]
-    (.offer ^BlockingQueue @queue {:type :exit :ctx ctx})
+    (.offer ^BlockingQueue @queue {:type :exit :ctx ctx'})
     )
   )
