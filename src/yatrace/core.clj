@@ -1,5 +1,6 @@
 (ns yatrace.core
-  (:require [yatrace.core.instrument :as inst])
+  (:require [yatrace.core.instrument :as inst]
+            [clojure.java.io :as io])
   (:use [clojure.tools.nrepl.server :only (start-server stop-server)])
   (:import [java.lang.instrument Instrumentation ClassFileTransformer]
            [java.util.concurrent BlockingQueue LinkedBlockingQueue]
@@ -7,7 +8,7 @@
   )
 
 (declare ^Instrumentation instrumentation queue)
-(declare server)
+(declare server repl-stop)
 
 (defmacro reset-signal-handler! [signal]
   (if (try (Class/forName "sun.misc.Signal")
@@ -21,9 +22,21 @@
     `(println "Unable to set signal handlers."))
   )
 
+(defn- start-watchdog
+  [port-file]
+  (let [trigger (io/file port-file)]
+    (future (loop []
+              (Thread/sleep 1000)
+              (println "watchdog live")
+              (println (.getName (Thread/currentThread)))
+              (if (.exists trigger)
+                (recur)
+                (repl-stop))))))
+
 (defn repl-start [port-file]
   (defonce server (start-server))
-  (spit port-file (:port server)))
+  (spit port-file (:port server))
+  (start-watchdog port-file))
 
 (defn repl-stop []
   (yatrace.Agent/reset)
