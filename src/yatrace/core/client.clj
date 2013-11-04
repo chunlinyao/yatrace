@@ -42,18 +42,26 @@
     (doseq [m vms]
       (println (.id m) (.displayName m)))
     ))
+(defn- init-form []
+  `(do (~'println "Welcom to yatrace")
+       (~'require 'complete.core)
+       (~'use '~'[yatrace helper (core :only [repl-stop] :rename {repl-stop stop})]
+              '~'[clojure (repl :only [doc source])]
+              '~'[yatrace.core (command :only [trace])])))
 
+(defn- init2 []
+  (list 'do '(println "Welcom to yatrace")
+        '(require 'complete.core)
+        '(use '[yatrace helper]
+              '[yatrace (core :only [repl-stop])]
+              '[clojure (repl :only [doc source])]
+              '[yatrace.core (command :only [trace])])))
+  
 (defn- repl-client [port-file]
   (if-let [port (slurp port-file)]
     (reply/launch {:attach port
                    :skip-default-init true
-                   :custom-eval (list 'do '(println "Welcom to yatrace")
-                                      '(require 'complete.core)
-                                      '(use '[yatrace helper]
-                                            '[yatrace (core :only [repl-stop])]
-                                            '[clojure (repl :only [doc source])]
-                                            '[yatrace.core (command :only [trace])])
-                                      )
+                   :custom-eval (init-form)
                    })
     (println "Can not connect to target vm")))
 

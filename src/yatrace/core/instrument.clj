@@ -16,7 +16,7 @@
   ([^Instrumentation inst]
      (->>  (.getAllLoadedClasses inst)
            (remove (some-fn interface? belong-yatrace? from-boot-class-loader?))))
-  ([inst class-name {package-pattern :package :or {package-pattern ".*"}}]
+  ([inst class-name & {package-pattern :package :or {package-pattern ".*"}}]
      (->> (get-candidates inst)
           (filter #(and (class-name (.getSimpleName ^Class %))
                         (re-find (re-pattern package-pattern) (.getName ( .getPackage ^Class %)))))))

@@ -59,9 +59,7 @@
         _ (swap! thread-context update-in [( Thread/currentThread)] pop)]
     ctx)
   )
-(defn method-enter [thread class-name method-name descriptor this-obj args]
-  (println (str "enter " class-name "#" method-name
-                ))
+(defn method-enter [thread stack-trace class-name method-name descriptor this-obj args]
   (let [ctx  {
               :class-name  class-name
               :method-name method-name
@@ -70,19 +68,18 @@
               :args        (seq args)
               :start       (System/currentTimeMillis)}]
     (push-invoke-context thread ctx)
-    (.offer ^BlockingQueue @queue {:type :enter :ctx ctx})
+    (.offer ^BlockingQueue @queue {:type :enter :thread thread :stack-trace stack-trace :ctx ctx})
     )
   )
 
-(defn method-exit [thread result-or-exception]
-  (println (str "exit method"))
+(defn method-exit [thread stack-trace result-or-exception]
   (let [end-time (System/currentTimeMillis)
         ctx (pop-invoke-context thread)
         ctx' (merge ctx {
                          :result-or-exception result-or-exception
                          :end                 end-time
-                         :duration            (- (:start ctx) end-time)
+                         :duration            (- end-time (:start ctx))
                          })]
-    (.offer ^BlockingQueue @queue {:type :exit :ctx ctx'})
+    (.offer ^BlockingQueue @queue {:type :exit :thread thread :stack-trace stack-trace :ctx ctx'})
     )
   )

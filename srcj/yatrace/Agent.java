@@ -14,10 +14,12 @@ import java.util.concurrent.Executors;
 
 public class Agent {
 	static public interface Advice {
-		void onMethodBegin(Thread thread, String className, String methodName,
-				String descriptor, Object thisObject, Object[] args);
+		void onMethodBegin(Thread thread, StackTraceElement[] stackTrace,
+				String className, String methodName, String descriptor,
+				Object thisObject, Object[] args);
 
-		void onMethodEnd(Thread thread, Object resultOrException2);
+		void onMethodEnd(Thread thread, StackTraceElement[] stackTrace,
+				Object resultOrException2);
 
 	}
 
@@ -151,12 +153,13 @@ public class Agent {
 			final Object thisObject, final Object[] args) {
 		if (delegate != null) {
 			final Thread t = Thread.currentThread();
+			final StackTraceElement[] stackTrace = t.getStackTrace();
 			executor.execute(new Runnable() {
 
 				@Override
 				public void run() {
-					delegate.onMethodBegin(t, className, methodName, descriptor,
-							thisObject, args);
+					delegate.onMethodBegin(t, stackTrace, className,
+							methodName, descriptor, thisObject, args);
 				}
 
 			});
@@ -167,11 +170,12 @@ public class Agent {
 	public static void onMethodEnd(final Object resultOrException) {
 		if (delegate != null) {
 			final Thread t = Thread.currentThread();
+			final StackTraceElement[] stackTrace = t.getStackTrace();
 			executor.execute(new Runnable() {
 
 				@Override
 				public void run() {
-					delegate.onMethodEnd(t, resultOrException);
+					delegate.onMethodEnd(t, stackTrace, resultOrException);
 				}
 
 			});

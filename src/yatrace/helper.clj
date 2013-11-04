@@ -13,8 +13,12 @@
 (defn members-info [obj] 
   (print-table (sort-by :name (:members (reflect obj)))))
 
-(defn field? [field] (not (Modifier/isStatic (.getModifiers field))))
-(defn get-fields [obj] (map #(vector (keyword (.getName %)) (.get % obj)) (filter field? (map #(do (.setAccessible % true) %) (into [] (. (. obj getClass) getDeclaredFields))))))
+(defn field? [^java.lang.reflect.Field field] (not (Modifier/isStatic (.getModifiers field))))
+
+(defn get-fields [^Object obj]
+  (map #(vector (keyword (.getName ^java.lang.reflect.Field %)) (.get ^java.lang.reflect.Field % obj))
+       (filter field? (map #(do (.setAccessible ^java.lang.reflect.Field % true) %)
+                           (reduce #(into %1 (.getDeclaredFields %2)) [] (list* (class obj) (supers (class obj))))))))
 (def primitive? (some-fn string? number?))
 (def clojure-struct? (some-fn map? set? vector? list?))
 
@@ -26,10 +30,24 @@
    ((some-fn nil? primitive? clojure-struct? keyword?) obj) obj
    (instance? java.lang.Iterable obj) (into [] obj)
    (instance? java.util.Map obj) (let [m (into {} obj)] (reduce #(assoc %1 (if (string? %2) (keyword %2) %2) (m %2)) {} (keys m)))
+   (some #(instance? % obj) [java.lang.Thread java.lang.ClassLoader]) (let [m (obj2map obj)] (reduce #(assoc %1 %2 (pr-str (m %2))) {} (keys m)))
    :else (obj2map obj)
    ))
 
-(def to-tree (partial clojure.walk/prewalk (partial to-map objfields-to-map)))
+(defn to-tree [form]
+  (let [visited (atom [])]
+    (clojure.walk/prewalk
+     (fn [^Object obj]
+       (if (some #(identical? obj %) @visited)
+         (format "<loop %s@%H>" (.getClass obj) (.hashCode obj))
+         (do (when-not (or (nil? obj)
+                           (instance? java.lang.CharSequence obj)
+                           (instance? java.lang.Number obj))
+               (swap! visited conj obj))
+             (to-map objfields-to-map obj))
+         )
+       )
+     form)))
 
 (defn get-obj-methods [obj]
   (let [obj2methods (fn [obj] (map #(do (.setAccessible % true) %) (into [] (. (. obj getClass) getDeclaredMethods))))

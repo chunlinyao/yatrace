@@ -19,11 +19,9 @@
 
   (proxy [ClassAdapter] [cw]
     (visitMethod [acc name desc sign exces]
-      (print name)
       (let [^ClassAdapter this this
             mv (proxy-super visitMethod acc name desc sign exces)
             target? (delay (method-filter name))]
-        (println (str class-name " " name " " desc " is target? " @target? ". origin mv is " mv ". not abstrace? " (not-abstract? acc)))
         (if (and (not (nil? mv))
                  (not-abstract? acc)
                  @target?)
