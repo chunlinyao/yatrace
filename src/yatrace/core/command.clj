@@ -6,18 +6,33 @@
   (:use [clojure.pprint :only [ pprint]])
   (:import [java.lang.instrument Instrumentation]))
 
-(defn- get-method-filter [method]
-  (if (nil? method)
-    (constantly true)
-    #{method})
-  )
+(defn- make-method-filter
+  [class-method]
+  (cond (string? class-method)
+        (let [method  (second (s/split class-method #"\."))]
+          (if (nil? method)
+            (constantly true)
+            (fn [cn mn]
+              (#{method} mn))))
+        :else
+        (let [[_ method-filter] class-method]
+          method-filter)))
+
+(defn- make-class-filter
+  [class-method]
+  (cond
+   (string? class-method)
+   #{(first (s/split class-method #"\."))}
+   :else
+   (let [[class-filter _] class-method]
+     class-filter)))
 
 (defn trace [class-method & {:keys [package], :or {package ".*"}}]
   (let [lock (Object.)]
     (locking lock 
-      (let [method-filter (get-method-filter (second (s/split class-method #"\.")))
-            class-name (first (s/split class-method #"\."))
-            classes (instrument/get-candidates core/instrumentation #{class-name} :package package)
+      (let [method-filter (make-method-filter class-method)
+            class-filter (make-class-filter class-method)
+            classes (instrument/get-candidates core/instrumentation class-filter  :package package)
             reset-task (doto  (Thread. #(locking lock (do (doseq [klass classes] (instrument/reset-class core/instrumentation [klass]))
                                                          )))
                          (.setDaemon true)

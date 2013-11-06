@@ -21,7 +21,7 @@
     (visitMethod [acc name desc sign exces]
       (let [^ClassAdapter this this
             mv (proxy-super visitMethod acc name desc sign exces)
-            target? (delay (method-filter name))]
+            target? (delay (method-filter class-name name))]
         (if (and (not (nil? mv))
                  (not-abstract? acc)
                  @target?)
