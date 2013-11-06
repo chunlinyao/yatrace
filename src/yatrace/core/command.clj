@@ -12,7 +12,10 @@
     #{method})
   )
 
-(defn trace [class-method & {:keys [package], :or {package ".*"}}]
+(defn- default-handler [evt]
+  (pprint (helper/to-tree (:ctx evt))))
+
+(defn trace [class-method & {:keys [package handler background], :or {package ".*" handler default-handler background false}}]
   (let [lock (Object.)]
     (locking lock 
       (let [method-filter (get-method-filter (second (s/split class-method #"\.")))
@@ -29,9 +32,6 @@
         (core/reset-queue)
         (doseq [evt (repeatedly core/take-queue)]
           (do (println (format "%s event from %s@%H" (name (:type evt)) (class (:thread evt)) (.hashCode (:thread evt))))
-              (pprint (helper/to-tree (:ctx  evt)))
+              (handler evt)
               (when (instance? Throwable (get-in evt [:ctx :result-or-exception]))
-                (.printStackTrace ^Throwable (get-in evt [:ctx :result-or-exception]) *out*))))
-        ))
-    )
-  )
+                (.printStackTrace ^Throwable (get-in evt [:ctx :result-or-exception]) *out*))))))))
