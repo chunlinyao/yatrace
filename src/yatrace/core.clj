@@ -27,8 +27,6 @@
   (let [trigger (io/file port-file)]
     (future (loop []
               (Thread/sleep 1000)
-              (println "watchdog live")
-              (println (.getName (Thread/currentThread)))
               (if (.exists trigger)
                 (recur)
                 (repl-stop))))))

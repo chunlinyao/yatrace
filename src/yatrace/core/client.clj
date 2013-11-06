@@ -47,15 +47,9 @@
        (~'require 'complete.core)
        (~'use '~'[yatrace helper (core :only [repl-stop] :rename {repl-stop stop})]
               '~'[clojure (repl :only [doc source])]
-              '~'[yatrace.core (command :only [trace])])))
+              '~'[yatrace.core (command :only [trace])])
+       (~'println ~'(:port yatrace.core/server))))
 
-(defn- init2 []
-  (list 'do '(println "Welcom to yatrace")
-        '(require 'complete.core)
-        '(use '[yatrace helper]
-              '[yatrace (core :only [repl-stop])]
-              '[clojure (repl :only [doc source])]
-              '[yatrace.core (command :only [trace])])))
   
 (defn- repl-client [port-file]
   (if-let [port (slurp port-file)]

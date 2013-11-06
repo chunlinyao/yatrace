@@ -1,12 +1,15 @@
 package yatrace;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Enumeration;
+import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -48,7 +51,10 @@ public class Agent {
 			throws Exception {
 		final String[] parts = args.split("\n", 2);
 		final URL agentJar = new File(parts[0]).toURI().toURL();
-		final ClassLoader classLoader = makeClassLoader(new URL[] { agentJar });
+		final URL cljsrc = new File(new File(parts[0]).getParentFile()
+				.getParentFile(), "src/").toURI().toURL();
+		final ClassLoader classLoader = makeClassLoader(new URL[] { cljsrc,
+				agentJar });
 		reset();
 		executor = Executors.newSingleThreadExecutor();
 
@@ -137,6 +143,26 @@ public class Agent {
 								}
 							}
 
+							public URL getResource(String name) {
+								URL url = findResource(name);
+								if (url == null && getParent() != null) {
+									url = getParent().getResource(name);
+								}
+								return url;
+							}
+
+							public Enumeration<URL> getResources(String name)
+									throws IOException {
+								@SuppressWarnings("rawtypes")
+								Enumeration[] tmp = new Enumeration[2];
+								if (getParent() != null) {
+									tmp[1] = getParent().getResources(name);
+								}
+
+								tmp[0] = findResources(name);
+								return new CompoundEnumeration<>(tmp);
+							}
+
 						};
 
 					}
@@ -189,5 +215,36 @@ public class Agent {
 			executor.shutdownNow();
 		}
 		executor = null;
+	}
+
+	@SuppressWarnings("rawtypes")
+	static class CompoundEnumeration<E> implements Enumeration<E> {
+		private Enumeration[] enums;
+		private int index = 0;
+
+		public CompoundEnumeration(Enumeration[] enums) {
+			this.enums = enums;
+		}
+
+		private boolean next() {
+			while (index < enums.length) {
+				if (enums[index] != null && enums[index].hasMoreElements()) {
+					return true;
+				}
+				index++;
+			}
+			return false;
+		}
+
+		public boolean hasMoreElements() {
+			return next();
+		}
+
+		public E nextElement() {
+			if (!next()) {
+				throw new NoSuchElementException();
+			}
+			return (E) enums[index].nextElement();
+		}
 	}
 }
