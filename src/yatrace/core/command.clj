@@ -36,11 +36,11 @@
       (let [method-filter (make-method-filter class-method)
             class-filter (make-class-filter class-method)
             classes (instrument/get-candidates core/instrumentation class-filter  :package package)
-            reset-task (doto  (Thread. #(locking lock (do (doseq [klass classes] (instrument/reset-class core/instrumentation [klass]))
+            reset-task (doto
+                           (Thread. #(locking lock (do (doseq [klass classes] (instrument/reset-class core/instrumentation [klass]))
                                                          )))
                          (.setDaemon true)
-                         (.start)
-                         )
+                         (.start))
             transform-task (future (doseq [klass classes] (instrument/probe-class core/instrumentation (instrument/class-trace-transformer method-filter (set classes)) [ klass])))
             ]
         @transform-task
