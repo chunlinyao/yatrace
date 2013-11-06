@@ -40,6 +40,7 @@
         exit  (to-asm-method Agent/ON_METHOD_END)
         start (Label.)
         end   (Label.)]
+    (println (format "aaa %s#%s" class-name name))
     (proxy [AdviceAdapter] [mv acc name desc]
       
       (visitMaxs [max-stack max-local]
