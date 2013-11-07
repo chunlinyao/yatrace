@@ -10,24 +10,35 @@
 (defn- belong-yatrace? [^Class k]
   (-> (.getName k)
       (.startsWith "yatrace.")))
+
 (defn- from-boot-class-loader? [^Class k]
   (nil? (.getClassLoader k)))
+
+(defn- array-class?
+  [^Class klass]
+  (.startsWith (.getName klass) "["))
+
+(defn- package-name [^Class klass]
+  (if-let [package (.getPackage klass)]
+    (.getName package)
+    ""))
 
 (defn get-candidates
   ([^Instrumentation inst]
      (->>  (.getAllLoadedClasses inst)
-           (remove (some-fn interface? belong-yatrace? from-boot-class-loader?))))
+           (remove (some-fn interface? belong-yatrace? from-boot-class-loader? array-class?))))
   ([inst class-filter & {package-pattern :package :or {package-pattern ".*"}}]
      (->> (get-candidates inst)
           (filter #(and (class-filter (last (s/split (.getName ^Class %) #"\.")))
-                        (re-find (re-pattern package-pattern) (.getName ( .getPackage ^Class %)))))))
+                        (re-find (re-pattern package-pattern) (package-name %))))))
   )
 
 (defn class-trace-transformer [method-filter class-filter]
   (proxy [ClassFileTransformer] []
-    (transform [loader name class-being-redefined
+    (transform [loader name ^Class class-being-redefined
                 protection-domain classfile-buffer]
-      (if (class-filter (last (s/split (.getName ^Class class-being-redefined) #"\.")))
+      (println name (.getName class-being-redefined))
+      (if (class-filter (last (s/split name #"/")))
         (decorate/decorate classfile-buffer name method-filter)
         nil))))
 
